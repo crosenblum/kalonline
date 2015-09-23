@@ -1,0 +1,168 @@
+    // read directory
+    $orig_dir = "C:\\Server Folder\\Server\\Log";
+    $orig_log_file="";
+    $dest_dir = "C:\\www\\";
+    $dest_log_file="C:\\www\\logins.txt";
+
+    // look for this file
+    $day = date("d")-1;
+    $month = date("m");
+    $year = date("Y");
+    $fm = $day.'-'.$month.'-'.$year;
+
+    // copy file flag
+    $cff = "yes";
+
+    // check if logins.txt exists
+    if (file_exists($dest_log_file)) {
+
+        // check if was copied today
+        $last_modified=filemtime($dest_log_file);
+        $file_date=date("d-m-Y",$last_modified);
+
+        // now compare the two
+        if ($fm==$file_date) {
+            $cff = "no";
+        }
+
+    } else {
+        $cff = "yes";
+    }
+
+    // check copy file flag
+    if ($cff=="yes") {
+
+        // Open a known directory, and proceed to read its contents
+        if (is_dir($orig_dir)) {
+            if ($dh = opendir($orig_dir)) {
+                while (($file = readdir($dh)) !== false) {
+                    if (stristr($file,'login') && stristr($file,$fm)) {
+                        $orig_log_file = $file;
+                    }
+                }
+                closedir($dh);
+            }
+        }
+
+        // check if orig login file exists
+        if (strlen($orig_log_file) < 1) {
+            echo 'Sorry can not find yesterdays login log files...';
+            exit;
+        }
+
+        // now copy login file
+        $orig_log_file = "C:\\Documents and Settings\\Craig M. Rosenblum\\Desktop\\Server Folder\\Server\\Log\\".$orig_log_file;
+
+        if (!copy($orig_log_file, $dest_log_file)) {
+            echo "failed to copy $file...\n";
+            exit;
+        }
+
+    }
+
+    // now read the logins file
+
+    $handle = @fopen($dest_log_file,"r");
+
+    if ($handle) {
+
+        while (!feof($handle)) {
+
+            $buffer = fgets($handle, 4096);
+
+               // get login date/time
+               $my_date=substr($buffer,0,21);
+            $my_date=str_replace('[','',$my_date);
+            $my_date=str_replace(']','',$my_date);
+
+            // grab day
+            $day=substr($my_date,0,2);
+
+            // grab month
+            $month=substr($my_date,3,2);
+
+            // grab year
+            $year=substr($my_date,6,4);
+
+            // echo 'Day: ',$day,'<br />';
+            // echo 'Month: ',$month,'<br />';
+            // echo 'Year: ',$year,'<br />';
+
+            // get time
+            $my_time=substr($my_date,11,8);
+
+            //reformat my_date
+            $my_date=$year.'-'.$month.'-'.$day.' '.$my_time;
+
+            // find position for name
+            $beg_name_pos=strpos($buffer,'Name: ');
+            $end_name_pos=strpos($buffer,',');
+
+            // get length of name data
+            $nl=$end_name_pos - $beg_name_pos;
+
+            // get login name
+            $my_name=substr($buffer,$beg_name_pos,$nl);
+
+            // find position for ip address
+            $beg_pos=strpos($buffer,'IP: ');
+            $end_pos=strpos($buffer,')');
+
+            // replace str
+            $my_name=str_replace('Name: ','',$my_name);
+
+            // get length of ip data
+            $ipl=$end_pos - $beg_pos;
+
+            // get ip address
+            $my_ip=substr($buffer,$beg_pos,$ipl);
+
+            // replace str
+            $my_ip=str_replace('IP: ','',$my_ip);
+
+
+            // now check if this user exists
+            $q="select UID, PID from dbo.Player where [Name]='".$my_name."'";
+            $results = odbc_exec($db, $q);
+
+            // echo 'Query: ',$q,'<br />';
+
+            while($row = odbc_fetch_array($results)) {
+                $uid = $row['UID'];
+                $pid = $row['PID'];
+            }
+
+            // echo 'Date: ',$my_date,'<br />';
+            // echo 'Name: ',$my_name,'<br />';
+            // echo 'IP Address: ',$my_ip,'<br />';
+            // echo 'UID: ',$uid,'<br />';
+            // echo 'PID: ',$pid,'<br />';
+
+            if (strlen($pid) > 0) {
+
+                // step 1. update laston field in player table
+                $uq_one="update dbo.Player set laston = '".$my_date."' where PID = ".$pid;
+                $uq_one_results = odbc_exec($db, $uq_one);
+
+                // step 2. update ip address in login table
+                $uq_two="update kal_auth.dbo.Login set IPAddr = '".$my_ip."' where UID = ".$uid;
+                $uq_two_results = odbc_exec($db, $uq_two);
+
+            }
+
+            $pid="";
+            $uid="";
+
+            // exit;
+
+
+
+        }
+
+        fclose($handle);
+
+    }
+
+Edit / Delete Edit Post   Quick reply to this message Reply   Reply With Quote Reply With Quote   Multi-Quote This Message      
+
+  
