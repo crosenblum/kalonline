@@ -1,0 +1,38 @@
+
+<?php
+
+// dissolve all alliances and guilds
+
+// include mssql class
+require_once('../classes/class.odbc.php');
+
+$db = new odbc_db();
+
+// create connection
+$conn = $db->db_connect();
+
+// delete all allainces
+$sql ="DELETE FROM dbo.[GuildAlliance]";
+$results = $db->query($conn,$sql);
+
+// delete guild castle
+$sql ="DELETE FROM dbo.[GuildCastle]";
+$results = $db->query($conn,$sql);
+
+// delete guild members
+$sql ="DELETE FROM dbo.[GuildMember]";
+$results = $db->query($conn,$sql);
+
+// delete guild rank
+$sql ="DELETE FROM dbo.[GuildRank]";
+$results = $db->query($conn,$sql);
+
+// delete guild war
+$sql ="DELETE FROM dbo.[GuildWar]";
+$results = $db->query($conn,$sql);
+
+hi// disconnect connection
+$db->disconnect($conn);
+
+
+?>
